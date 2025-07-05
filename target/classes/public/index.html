@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Expense Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>💰 Personal Expense Tracker</h1>
+        <p>Track your daily mess and canteen expenses with ease</p>
+    </div>
+
+    <nav class="nav">
+        <a href="index.html" class="nav-btn active">Home</a>
+        <a href="add.html" class="nav-btn">Add Expense</a>
+        <a href="today.html" class="nav-btn">Today's Expenses</a>
+        <a href="history.html" class="nav-btn">History</a>
+    </nav>
+
+    <div class="card">
+        <h2>Welcome to Your Expense Tracker!</h2>
+        <p style="text-align: center; margin-bottom: 30px; color: #718096; font-size: 1.1em;">
+            Keep track of your daily food expenses and manage your budget effectively.
+        </p>
+
+        <div class="stats" id="todayStats">
+            <div class="stat-card">
+                <h3>Today's Total</h3>
+                <div class="amount" id="todayTotal">₹0.00</div>
+            </div>
+            <div class="stat-card mess">
+                <h3>Mess Expenses</h3>
+                <div class="amount" id="messTotal">₹0.00</div>
+            </div>
+            <div class="stat-card canteen">
+                <h3>Canteen Expenses</h3>
+                <div class="amount" id="canteenTotal">₹0.00</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="add.html" class="btn" style="display: inline-block; text-decoration: none; max-width: 300px;">
+                Add New Expense
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Quick Actions</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+            <div style="text-align: center;">
+                <div style="font-size: 3em; margin-bottom: 10px;">🍽️</div>
+                <h3 style="margin-bottom: 10px; color: #4a5568;">Mess Expense</h3>
+                <p style="color: #718096; margin-bottom: 15px;">Track your mess hall expenses</p>
+                <a href="add.html?category=MESS" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">
+                    Add Mess Expense
+                </a>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 3em; margin-bottom: 10px;">☕</div>
+                <h3 style="margin-bottom: 10px; color: #4a5568;">Canteen Expense</h3>
+                <p style="color: #718096; margin-bottom: 15px;">Track your canteen purchases</p>
+                <a href="add.html?category=CANTEEN" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">
+                    Add Canteen Expense
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Recent Expenses</h2>
+        <div id="recentExpenses" class="loading">
+            Loading recent expenses...
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2024 Personal Expense Tracker. Built with Java & Spark Framework.</p>
+    </div>
+</div>
+
+<script>
+    // Load today's statistics
+    async function loadTodayStats() {
+        try {
+            const response = await fetch('/api/today');
+            const data = await response.json();
+
+            document.getElementById('todayTotal').textContent = `₹${data.total.toFixed(2)}`;
+
+            // Calculate category totals
+            let messTotal = 0;
+            let canteenTotal = 0;
+
+            data.expenses.forEach(expense => {
+                if (expense.category === 'MESS') {
+                    messTotal += expense.amount;
+                } else if (expense.category === 'CANTEEN') {
+                    canteenTotal += expense.amount;
+                }
+            });
+
+            document.getElementById('messTotal').textContent = `₹${messTotal.toFixed(2)}`;
+            document.getElementById('canteenTotal').textContent = `₹${canteenTotal.toFixed(2)}`;
+
+            // Load recent expenses
+            loadRecentExpenses(data.expenses);
+
+        } catch (error) {
+            console.error('Error loading today\'s stats:', error);
+            document.getElementById('todayTotal').textContent = '₹0.00';
+            document.getElementById('messTotal').textContent = '₹0.00';
+            document.getElementById('canteenTotal').textContent = '₹0.00';
+
+            document.getElementById('recentExpenses').innerHTML = `
+                <div class="empty-state">
+                    <h3>Unable to load expenses</h3>
+                    <p>Please check your connection and try again.</p>
+                </div>
+            `;
+        }
+    }
+
+    function loadRecentExpenses(expenses) {
+        const container = document.getElementById('recentExpenses');
+
+        if (expenses.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>No expenses today</h3>
+                    <p>Start tracking your expenses by adding your first entry!</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Show only the last 5 expenses
+        const recentExpenses = expenses.slice(0, 5);
+
+        const expenseList = document.createElement('div');
+        expenseList.className = 'expense-list';
+
+        recentExpenses.forEach(expense => {
+            const expenseItem = document.createElement('div');
+            expenseItem.className = 'expense-item';
+
+            expenseItem.innerHTML = `
+                <div class="expense-details">
+                    <h4>${expense.description}</h4>
+                    <p>${expense.date}</p>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <span class="expense-amount">₹${expense.amount.toFixed(2)}</span>
+                    <span class="expense-category ${expense.category.toLowerCase()}">${expense.category}</span>
+                </div>
+            `;
+
+            expenseList.appendChild(expenseItem);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(expenseList);
+
+        if (expenses.length > 5) {
+            const viewAllLink = document.createElement('div');
+            viewAllLink.style.textAlign = 'center';
+            viewAllLink.style.marginTop = '20px';
+            viewAllLink.innerHTML = `
+                <a href="today.html" class="btn btn-secondary" style="text-decoration: none; display: inline-block; max-width: 200px;">
+                    View All (${expenses.length})
+                </a>
+            `;
+            container.appendChild(viewAllLink);
+        }
+    }
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTodayStats();
+    });
+</script>
+</body>
+</html>

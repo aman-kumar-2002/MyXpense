@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Expense - Personal Expense Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>💰 Add New Expense</h1>
+        <p>Record your mess and canteen expenses</p>
+    </div>
+
+    <nav class="nav">
+        <a href="index.html" class="nav-btn">Home</a>
+        <a href="add.html" class="nav-btn active">Add Expense</a>
+        <a href="today.html" class="nav-btn">Today's Expenses</a>
+        <a href="history.html" class="nav-btn">History</a>
+    </nav>
+
+    <div class="card">
+        <h2>Add Expense</h2>
+
+        <form action="/add-expense" method="POST" id="expenseForm">
+            <div class="form-group">
+                <label for="amount">Amount (₹)</label>
+                <input type="number" id="amount" name="amount" class="form-control"
+                       step="0.01" min="0" required placeholder="Enter amount">
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" name="category" class="form-control" required>
+                    <option value="">Select category</option>
+                    <option value="MESS">🍽️ Mess</option>
+                    <option value="CANTEEN">☕ Canteen</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input type="text" id="description" name="description" class="form-control"
+                       required placeholder="What did you buy?">
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn">Add Expense</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Quick Add</h2>
+        <p style="text-align: center; margin-bottom: 20px; color: #718096;">
+            Common expense amounts for quick entry
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
+            <button class="btn btn-secondary" onclick="quickAdd(50, 'MESS', 'Breakfast')">
+                ₹50<br><small>Breakfast</small>
+            </button>
+            <button class="btn btn-secondary" onclick="quickAdd(80, 'MESS', 'Lunch')">
+                ₹80<br><small>Lunch</small>
+            </button>
+            <button class="btn btn-secondary" onclick="quickAdd(70, 'MESS', 'Dinner')">
+                ₹70<br><small>Dinner</small>
+            </button>
+            <button class="btn btn-secondary" onclick="quickAdd(25, 'CANTEEN', 'Tea/Coffee')">
+                ₹25<br><small>Tea/Coffee</small>
+            </button>
+            <button class="btn btn-secondary" onclick="quickAdd(40, 'CANTEEN', 'Snacks')">
+                ₹40<br><small>Snacks</small>
+            </button>
+            <button class="btn btn-secondary" onclick="quickAdd(60, 'CANTEEN', 'Sandwich')">
+                ₹60<br><small>Sandwich</small>
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Today's Summary</h2>
+        <div class="stats" id="todaySummary">
+            <div class="stat-card">
+                <h3>Today's Total</h3>
+                <div class="amount" id="todayTotal">₹0.00</div>
+            </div>
+            <div class="stat-card mess">
+                <h3>Mess Total</h3>
+                <div class="amount" id="messTotal">₹0.00</div>
+            </div>
+            <div class="stat-card canteen">
+                <h3>Canteen Total</h3>
+                <div class="amount" id="canteenTotal">₹0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2024 Personal Expense Tracker. Built with Java & Spark Framework.</p>
+    </div>
+</div>
+
+<script>
+    // Check URL parameters for pre-selected category
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const category = urlParams.get('category');
+
+        if (category) {
+            document.getElementById('category').value = category;
+        }
+
+        // Load today's summary
+        loadTodaySummary();
+    });
+
+    // Quick add function
+    function quickAdd(amount, category, description) {
+        document.getElementById('amount').value = amount;
+        document.getElementById('category').value = category;
+        document.getElementById('description').value = description;
+
+        // Auto-submit the form
+        document.getElementById('expenseForm').submit();
+    }
+
+    // Load today's summary
+    async function loadTodaySummary() {
+        try {
+            const response = await fetch('/api/today');
+            const data = await response.json();
+
+            document.getElementById('todayTotal').textContent = `₹${data.total.toFixed(2)}`;
+
+            // Calculate category totals
+            let messTotal = 0;
+            let canteenTotal = 0;
+
+            data.expenses.forEach(expense => {
+                if (expense.category === 'MESS') {
+                    messTotal += expense.amount;
+                } else if (expense.category === 'CANTEEN') {
+                    canteenTotal += expense.amount;
+                }
+            });
+
+            document.getElementById('messTotal').textContent = `₹${messTotal.toFixed(2)}`;
+            document.getElementById('canteenTotal').textContent = `₹${canteenTotal.toFixed(2)}`;
+
+        } catch (error) {
+            console.error('Error loading today\'s summary:', error);
+            document.getElementById('todayTotal').textContent = '₹0.00';
+            document.getElementById('messTotal').textContent = '₹0.00';
+            document.getElementById('canteenTotal').textContent = '₹0.00';
+        }
+    }
+
+    // Form validation
+    document.getElementById('expenseForm').addEventListener('submit', function(e) {
+        const amount = document.getElementById('amount').value;
+        const category = document.getElementById('category').value;
+        const description = document.getElementById('description').value;
+
+        if (!amount || !category || !description) {
+            e.preventDefault();
+            alert('Please fill in all fields');
+            return;
+        }
+
+        if (parseFloat(amount) <= 0) {
+            e.preventDefault();
+            alert('Amount must be greater than 0');
+            return;
+        }
+
+        if (description.trim().length < 2) {
+            e.preventDefault();
+            alert('Description must be at least 2 characters long');
+            return;
+        }
+    });
+
+    // Auto-focus on amount field
+    document.getElementById('amount').focus();
+</script>
+</body>
+</html>

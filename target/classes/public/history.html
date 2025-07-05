@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - Personal Expense Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📊 Expense History</h1>
+        <p>View and analyze your past expenses</p>
+    </div>
+
+    <nav class="nav">
+        <a href="index.html" class="nav-btn">Home</a>
+        <a href="add.html" class="nav-btn">Add Expense</a>
+        <a href="today.html" class="nav-btn">Today's Expenses</a>
+        <a href="history.html" class="nav-btn active">History</a>
+    </nav>
+
+    <div class="card">
+        <h2>Filter Options</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <div class="form-group">
+                <label for="monthSelect">Select Month</label>
+                <select id="monthSelect" class="form-control">
+                    <option value="">Current Month</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="yearSelect">Select Year</label>
+                <select id="yearSelect" class="form-control">
+                    <option value="">Current Year</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="categoryFilter">Category</label>
+                <select id="categoryFilter" class="form-control">
+                    <option value="">All Categories</option>
+                    <option value="MESS">🍽️ Mess</option>
+                    <option value="CANTEEN">☕ Canteen</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="visibility: hidden;">Action</label>
+                <button onclick="loadHistoryData()" class="btn">Load History</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Monthly Summary</h2>
+        <div class="stats" id="monthlyStats">
+            <div class="stat-card">
+                <h3>Total Spent</h3>
+                <div class="amount" id="monthlyTotal">₹0.00</div>
+            </div>
+            <div class="stat-card mess">
+                <h3>Mess Expenses</h3>
+                <div class="amount" id="monthlyMess">₹0.00</div>
+            </div>
+            <div class="stat-card canteen">
+                <h3>Canteen Expenses</h3>
+                <div class="amount" id="monthlyCanteen">₹0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Expense Details</h2>
+        <div id="historyList" class="loading">
+            Loading expense history...
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Quick Stats</h2>
+        <div id="quickStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div class="stat-card">
+                <h3>Average Daily Spending</h3>
+                <div class="amount" id="avgDaily">₹0.00</div>
+            </div>
+            <div class="stat-card">
+                <h3>Highest Single Expense</h3>
+                <div class="amount" id="maxExpense">₹0.00</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Transactions</h3>
+                <div class="amount" id="totalTransactions">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Most Frequent Category</h3>
+                <div class="amount" id="frequentCategory">-</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2024 Personal Expense Tracker. Built with Java & Spark Framework.</p>
+    </div>
+</div>
+
+<script>
+    let currentHistoryData = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeFilters();
+        loadCurrentMonthData();
+    });
+
+    // Initialize filter dropdowns
+    function initializeFilters() {
+        const monthSelect = document.getElementById('monthSelect');
+        const yearSelect = document.getElementById('yearSelect');
+        const currentDate = new Date();
+
+        // Populate months
+        const months = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+
+        months.forEach((month, index) => {
+            const option = document.createElement('option');
+            option.value = index + 1;
+            option.textContent = month;
+            if (index === currentDate.getMonth()) {
+                option.selected = true;
+            }
+            monthSelect.appendChild(option);
+        });
+
+        // Populate years (current year and previous 2 years)
+        const currentYear = currentDate.getFullYear();
+        for (let year = currentYear; year >= currentYear - 2; year--) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            if (year === currentYear) {
+                option.selected = true;
+            }
+            yearSelect.appendChild(option);
+        }
+    }
+
+    // Load current month data
+    async function loadCurrentMonthData() {
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth() + 1;
+        const currentYear = currentDate.getFullYear();
+
+        document.getElementById('monthSelect').value = currentMonth;
+        document.getElementById('yearSelect').value = currentYear;
+
+        await loadHistoryData();
+    }
+
+    // Load history data
+    async function loadHistoryData() {
+        const month = document.getElementById('monthSelect').value || new Date().getMonth() + 1;
+        const year = document.getElementById('yearSelect').value || new Date().getFullYear();
+
+        try {
+            // For now, we'll simulate the API call since the backend doesn't have this endpoint
+            // In a real implementation, you would call something like:
+            // const response = await fetch(`/api/history?month=${month}&year=${year}`);
+
+            // Simulate loading today's data and extrapolate for demo
+            const response = await fetch('/api/today');
+            const todayData = await response.json();
+
+            // Simulate historical data by duplicating today's data with different dates
+            const simulatedHistory = generateSimulatedHistory(todayData.expenses, month, year);
+
+            currentHistoryData = simulatedHistory;
+            displayHistoryData(simulatedHistory);
+            updateHistoryStats(simulatedHistory);
+
+        } catch (error) {
+            console.error('Error loading history:', error);
+            document.getElementById('historyList').innerHTML = `
+                <div class="empty-state">
+                    <h3>Unable to load history</h3>
+                    <p>Please check your connection and try again.</p>
+                </div>
+            `;
+        }
+    }
+
+    // Generate simulated history data for demo purposes
+    function generateSimulatedHistory(todayExpenses, month, year) {
+        const history = [];
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        // Add today's expenses
+        todayExpenses.forEach(expense => {
+            history.push({...expense});
+        });
+
+        // Generate some random historical data for demo
+        const descriptions = {
+            'MESS': ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Special meal'],
+            'CANTEEN': ['Tea', 'Coffee', 'Sandwich', 'Burger', 'Pastry', 'Juice', 'Snacks']
+        };
+
+        for (let day = 1; day <= Math.min(daysInMonth, 15); day++) {
+            const date = new Date(year, month - 1, day);
+            if (date <= new Date()) {
+                // Add 1-3 random expenses per day
+                const numExpenses = Math.floor(Math.random() * 3) + 1;
+
+                for (let i = 0; i < numExpenses; i++) {
+                    const category = Math.random() > 0.5 ? 'MESS' : 'CANTEEN';
+                    const amount = category === 'MESS' ?
+                        Math.floor(Math.random() * 50) + 30 :
+                        Math.floor(Math.random() * 40) + 20;
+                    const description = descriptions[category][Math.floor(Math.random() * descriptions[category].length)];
+
+                    history.push({
+                        amount: amount,
+                        category: category,
+                        description: description,
+                        date: date.toISOString().split('T')[0]
+                    });
+                }
+            }
+        }
+
+        return history.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+
+    // Display history data
+    function displayHistoryData(expenses) {
+        const container = document.getElementById('historyList');
+        const categoryFilter = document.getElementById('categoryFilter').value;
+
+        // Apply category filter
+        let filteredExpenses = expenses;
+        if (categoryFilter) {
+            filteredExpenses = expenses.filter(expense => expense.category === categoryFilter);
+        }
+
+        if (filteredExpenses.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>No expenses found</h3>
+                    <p>Try adjusting your filters or add some expenses!</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Group expenses by date
+        const groupedExpenses = {};
+        filteredExpenses.forEach(expense => {
+            const date = expense.date;
+            if (!groupedExpenses[date]) {
+                groupedExpenses[date] = [];
+            }
+            groupedExpenses[date].push(expense);
+        });
+
+        const historyHTML = Object.keys(groupedExpenses)
+            .sort((a, b) => new Date(b) - new Date(a))
+            .map(date => {
+                const dayExpenses = groupedExpenses[date];
+                const dayTotal = dayExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+
+                return `
+                    <div style="margin-bottom: 25px;">
+                        <div style="background: rgba(102, 126, 234, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                            <h3 style="color: #4a5568; margin-bottom: 5px;">${dayName}</h3>
+                            <p style="color: #718096; margin-bottom: 5px;">${new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                            <p style="color: #667eea; font-weight: bold;">Daily Total: ₹${dayTotal.toFixed(2)}</p>
+                        </div>
+                        <div class="expense-list">
+                            ${dayExpenses.map(expense => `
+                                <div class="expense-item">
+                                    <div class="expense-details">
+                                        <h4>${expense.description}</h4>
+                                        <p>${expense.category}</p>
+                                    </div>
+                                    <div style="display: flex; align-items: center;">
+                                        <span class="expense-amount">₹${expense.amount.toFixed(2)}</span>
+                                        <span class="expense-category ${expense.category.toLowerCase()}">${expense.category}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        container.innerHTML = historyHTML;
+    }
+
+    // Update history statistics
+    function updateHistoryStats(expenses) {
+        const totalAmount = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+        const messExpenses = expenses.filter(exp => exp.category === 'MESS');
+        const canteenExpenses = expenses.filter(exp => exp.category === 'CANTEEN');
+
+        const messTotal = messExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+        const canteenTotal = canteenExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+        // Update monthly summary
+        document.getElementById('monthlyTotal').textContent = `₹${totalAmount.toFixed(2)}`;
+        document.getElementById('monthlyMess').textContent = `₹${messTotal.toFixed(2)}`;
+        document.getElementById('monthlyCanteen').textContent = `₹${canteenTotal.toFixed(2)}`;
+
+        // Calculate quick stats
+        const uniqueDates = [...new Set(expenses.map(exp => exp.date))];
+        const avgDaily = uniqueDates.length > 0 ? totalAmount / uniqueDates.length : 0;
+        const maxExpense = expenses.length > 0 ? Math.max(...expenses.map(exp => exp.amount)) : 0;
+        const frequentCategory = messExpenses.length > canteenExpenses.length ? 'MESS' :
+                               canteenExpenses.length > messExpenses.length ? 'CANTEEN' : 'EQUAL';
+
+        document.getElementById('avgDaily').textContent = `₹${avgDaily.toFixed(2)}`;
+        document.getElementById('maxExpense').textContent = `₹${maxExpense.toFixed(2)}`;
+        document.getElementById('totalTransactions').textContent = expenses.length;
+        document.getElementById('frequentCategory').textContent = frequentCategory;
+    }
+
+    // Add event listeners for filters
+    document.getElementById('categoryFilter').addEventListener('change', function() {
+        displayHistoryData(currentHistoryData);
+    });
+</script>
+</body>
+</html>

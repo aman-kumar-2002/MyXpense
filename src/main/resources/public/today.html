@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Expenses - Personal Expense Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📅 Today's Expenses</h1>
+        <p id="currentDate">Loading...</p>
+    </div>
+
+    <nav class="nav">
+        <a href="index.html" class="nav-btn">Home</a>
+        <a href="add.html" class="nav-btn">Add Expense</a>
+        <a href="today.html" class="nav-btn active">Today's Expenses</a>
+        <a href="history.html" class="nav-btn">History</a>
+    </nav>
+
+    <div class="card">
+        <h2>Today's Summary</h2>
+        <div class="stats" id="todayStats">
+            <div class="stat-card">
+                <h3>Total Spent</h3>
+                <div class="amount" id="todayTotal">₹0.00</div>
+            </div>
+            <div class="stat-card mess">
+                <h3>Mess Expenses</h3>
+                <div class="amount" id="messTotal">₹0.00</div>
+            </div>
+            <div class="stat-card canteen">
+                <h3>Canteen Expenses</h3>
+                <div class="amount" id="canteenTotal">₹0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>All Expenses</h2>
+            <div>
+                <select id="filterCategory" class="form-control" style="width: auto; display: inline-block; margin-right: 10px;">
+                    <option value="">All Categories</option>
+                    <option value="MESS">🍽️ Mess</option>
+                    <option value="CANTEEN">☕ Canteen</option>
+                </select>
+                <button onclick="refreshData()" class="btn btn-secondary" style="padding: 10px 20px; width: auto;">
+                    🔄 Refresh
+                </button>
+            </div>
+        </div>
+
+        <div id="expensesList" class="loading">
+            Loading today's expenses...
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Quick Actions</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <a href="add.html?category=MESS" class="btn btn-secondary" style="text-decoration: none;">
+                🍽️ Add Mess Expense
+            </a>
+            <a href="add.html?category=CANTEEN" class="btn btn-secondary" style="text-decoration: none;">
+                ☕ Add Canteen Expense
+            </a>
+            <a href="history.html" class="btn btn-secondary" style="text-decoration: none;">
+                📊 View History
+            </a>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2024 Personal Expense Tracker. Built with Java & Spark Framework.</p>
+    </div>
+</div>
+
+<script>
+    let allExpenses = [];
+
+    // Set current date
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const options = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        };
+        document.getElementById('currentDate').textContent = today.toLocaleDateString('en-US', options);
+
+        // Load today's expenses
+        loadTodayExpenses();
+
+        // Add filter event listener
+        document.getElementById('filterCategory').addEventListener('change', filterExpenses);
+    });
+
+    // Load today's expenses
+    async function loadTodayExpenses() {
+        try {
+            const response = await fetch('/api/today');
+            const data = await response.json();
+
+            allExpenses = data.expenses;
+
+            // Update statistics
+            updateStatistics(data);
+
+            // Display expenses
+            displayExpenses(allExpenses);
+
+        } catch (error) {
+            console.error('Error loading today\'s expenses:', error);
+            document.getElementById('expensesList').innerHTML = `
+                <div class="empty-state">
+                    <h3>Unable to load expenses</h3>
+                    <p>Please check your connection and try again.</p>
+                </div>
+            `;
+
+            // Reset statistics
+            document.getElementById('todayTotal').textContent = '₹0.00';
+            document.getElementById('messTotal').textContent = '₹0.00';
+            document.getElementById('canteenTotal').textContent = '₹0.00';
+        }
+    }
+
+    // Update statistics
+    function updateStatistics(data) {
+        document.getElementById('todayTotal').textContent = `₹${data.total.toFixed(2)}`;
+
+        // Calculate category totals
+        let messTotal = 0;
+        let canteenTotal = 0;
+
+        data.expenses.forEach(expense => {
+            if (expense.category === 'MESS') {
+                messTotal += expense.amount;
+            } else if (expense.category === 'CANTEEN') {
+                canteenTotal += expense.amount;
+            }
+        });
+
+        document.getElementById('messTotal').textContent = `₹${messTotal.toFixed(2)}`;
+        document.getElementById('canteenTotal').textContent = `₹${canteenTotal.toFixed(2)}`;
+    }
+
+    // Display expenses
+    function displayExpenses(expenses) {
+        const container = document.getElementById('expensesList');
+
+        if (expenses.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>No expenses found</h3>
+                    <p>Start tracking your expenses by adding your first entry!</p>
+                    <div style="margin-top: 20px;">
+                        <a href="add.html" class="btn" style="text-decoration: none; display: inline-block; max-width: 200px;">
+                            Add First Expense
+                        </a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const expenseList = document.createElement('div');
+        expenseList.className = 'expense-list';
+
+        expenses.forEach((expense, index) => {
+            const expenseItem = document.createElement('div');
+            expenseItem.className = 'expense-item';
+
+            // Format time from date if available
+            const timeStr = expense.time || 'Time not available';
+
+            expenseItem.innerHTML = `
+                <div class="expense-details">
+                    <h4>${expense.description}</h4>
+                    <p>${expense.date} • ${timeStr}</p>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <span class="expense-amount">₹${expense.amount.toFixed(2)}</span>
+                    <span class="expense-category ${expense.category.toLowerCase()}">${expense.category}</span>
+                </div>
+            `;
+
+            expenseList.appendChild(expenseItem);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(expenseList);
+
+        // Add summary at the bottom
+        const summary = document.createElement('div');
+        summary.style.cssText = 'text-align: center; padding: 20px; background: rgba(102, 126, 234, 0.1); margin-top: 20px; border-radius: 10px;';
+        summary.innerHTML = `
+            <h3 style="color: #4a5568; margin-bottom: 10px;">Summary</h3>
+            <p style="color: #718096;">
+                ${expenses.length} expense${expenses.length !== 1 ? 's' : ''} •
+                Total: ₹${expenses.reduce((sum, exp) => sum + exp.amount, 0).toFixed(2)}
+            </p>
+        `;
+        container.appendChild(summary);
+    }
+
+    // Filter expenses
+    function filterExpenses() {
+        const selectedCategory = document.getElementById('filterCategory').value;
+
+        if (selectedCategory === '') {
+            displayExpenses(allExpenses);
+        } else {
+            const filteredExpenses = allExpenses.filter(expense =>
+                expense.category === selectedCategory
+            );
+            displayExpenses(filteredExpenses);
+        }
+    }
+
+    // Refresh data
+    function refreshData() {
+        document.getElementById('expensesList').innerHTML = '<div class="loading">Refreshing expenses...</div>';
+        loadTodayExpenses();
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(function() {
+        loadTodayExpenses();
+    }, 30000);
+</script>
+</body>
+</html>
